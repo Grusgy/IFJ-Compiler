@@ -3,6 +3,54 @@
 
 #include <string.h>
 
+#define FOREACH_TOKENTYPE(TYPE) \
+        TYPE(TOK_CLASS) \
+        TYPE(TOK_IF) \
+        TYPE(TOK_ELSE) \
+        TYPE(TOK_IS) \
+        TYPE(TOK_NULL) \
+        TYPE(TOK_RETURN) \
+        TYPE(TOK_VAR) \
+        TYPE(TOK_WHILE) \
+        TYPE(TOK_IFJ) \
+        TYPE(TOK_STATIC) \
+        TYPE(TOK_IMPORT) \
+        TYPE(TOK_TYPE_NUM) \
+        TYPE(TOK_TYPE_STRING) \
+        TYPE(TOK_TYPE_NULL) \
+        TYPE(TOK_ID) \
+        TYPE(TOK_GLOBAL_ID) \
+        TYPE(TOK_CONST_INT) \
+        TYPE(TOK_CONST_FLOAT) \
+        TYPE(TOK_CONST_STR) \
+        TYPE(TOK_CONST_ML_STR) \
+        TYPE(TOK_PLUS) \
+        TYPE(TOK_MINUS) \
+        TYPE(TOK_ASTERISK) \
+        TYPE(TOK_DIV) \
+        TYPE(TOK_LT) \
+        TYPE(TOK_GT) \
+        TYPE(TOK_LTE) \
+        TYPE(TOK_GTE) \
+        TYPE(TOK_EQ) \
+        TYPE(TOK_NEQ) \
+        TYPE(TOK_EOL) \
+        TYPE(TOK_LBRACE) \
+        TYPE(TOK_RBRACE) \
+        TYPE(TOK_LPAR) \
+        TYPE(TOK_RPAR) \
+        TYPE(TOK_ASSIGN) \
+        TYPE(TOK_DOT) \
+        TYPE(TOK_COMMA) \
+        TYPE(TOK_EOF)
+
+#define GENERATE_STRING(STRING) #STRING,
+
+static const char *TOKENTYPE_STRING[] = {
+    FOREACH_TOKENTYPE(GENERATE_STRING)
+};
+
+
 // Token types
 typedef enum token_type {
     // Keywords
@@ -84,11 +132,9 @@ typedef enum {
     STATE_ML_STRING,
     STATE_ENDQUOTE1,
     STATE_ENDQUOTE2,
+    STATE_ML_START_WS,
+    STATE_ML_END_WS,
 
-    STATE_LT,
-    STATE_GT,
-    STATE_ASSIGN,
-    STATE_NEQ,
     STATE_SLASH,
     STATE_LINE_COMMENT,
     STATE_BLOCK_COMMENT,
