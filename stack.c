@@ -3,7 +3,7 @@
 //
 
 #include <stdlib.h>
-#include "parser.h"
+#include "generator.h"
 
 int Stack_Init( Stack *stack ) {
     if(stack == NULL)
