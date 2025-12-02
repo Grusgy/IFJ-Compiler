@@ -10,7 +10,11 @@ typedef enum {
     STMT_VAR_DECL,
     STMT_IF,
     STMT_BLOCK,
-    STMT_NONE
+    STMT_NONE,
+    STMT_WHILE,
+    STMT_FUN_DECL,
+    STMT_FUN_CALL,
+    STMT_RETURN
 } StmtType;
 
 // Dopředná deklarace, aby se Stmt mohl odkazovat na sám sebe
@@ -40,6 +44,26 @@ struct Stmt {
         struct {                // blok příkazů { stmt1; stmt2; ... }
             Stmt *first;        // první příkaz
         } block;
+
+        struct {
+            ast_t *cond;
+            Stmt *block;
+        } while_loop;
+
+        struct {
+            char* fun_name;
+            Stmt* fun_block;
+            //parametry
+        } fun_dec;
+
+        struct {
+            char* fun_name;
+            //parametry
+        } fun_call;
+
+        struct {
+            char* var_return;   //Může být null v případě že funkce je void
+        } return_;
     } as;
 };
 
