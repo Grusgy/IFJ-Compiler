@@ -1,8 +1,7 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
-#include <string.h>
-
+// Debugging macro - prints token type as string (TOKENTYPE_STRING[token->type])
 #define FOREACH_TOKENTYPE(TYPE) \
         TYPE(TOK_CLASS) \
         TYPE(TOK_IF) \
@@ -18,6 +17,16 @@
         TYPE(TOK_TYPE_NUM) \
         TYPE(TOK_TYPE_STRING) \
         TYPE(TOK_TYPE_NULL) \
+        TYPE(TOK_FUNC_READ_STR) \
+        TYPE(TOK_FUNC_READ_NUM) \
+        TYPE(TOK_FUNC_WRITE) \
+        TYPE(TOK_FUNC_FLOOR) \
+        TYPE(TOK_FUNC_STR) \
+        TYPE(TOK_FUNC_LENGTH) \
+        TYPE(TOK_FUNC_SUBSTRING) \
+        TYPE(TOK_FUNC_STRCMP) \
+        TYPE(TOK_FUNC_ORD) \
+        TYPE(TOK_FUNC_CHR) \
         TYPE(TOK_ID) \
         TYPE(TOK_GLOBAL_ID) \
         TYPE(TOK_CONST_INT) \
@@ -69,6 +78,18 @@ typedef enum token_type {
     TOK_TYPE_STRING,
     TOK_TYPE_NULL,
 
+    // Built-in functions
+    TOK_FUNC_READ_STR,
+    TOK_FUNC_READ_NUM,
+    TOK_FUNC_WRITE,
+    TOK_FUNC_FLOOR,
+    TOK_FUNC_STR,
+    TOK_FUNC_LENGTH,
+    TOK_FUNC_SUBSTRING,
+    TOK_FUNC_STRCMP,
+    TOK_FUNC_ORD,
+    TOK_FUNC_CHR,
+
     // Identifiers
     TOK_ID,
     TOK_GLOBAL_ID,
@@ -114,31 +135,6 @@ typedef struct token {
     TokenData data;
 } Token;
 
-int get_next_token(Token **token);
-
-// FSM states
-typedef enum {
-    STATE_START,
-    STATE_ID_KEYWORD,
-    STATE_ZERO,
-    STATE_INT,
-    STATE_FLOAT,
-
-    STATE_QUOTE1,
-    STATE_STRING,
-    STATE_ESCAPE,
-
-    STATE_QUOTE2,
-    STATE_ML_STRING,
-    STATE_ENDQUOTE1,
-    STATE_ENDQUOTE2,
-    STATE_ML_START_WS,
-    STATE_ML_END_WS,
-
-    STATE_SLASH,
-    STATE_LINE_COMMENT,
-    STATE_BLOCK_COMMENT,
-    STATE_ONECHAR_TOK
-} FSMState;
+int get_next_token(Token *token);
 
 #endif
