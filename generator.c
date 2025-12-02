@@ -3,23 +3,12 @@
 //
 
 #include "generator.h"
+#include "scanner.h"
+#include "ast.h"
+
 
 #include <stdio.h>
 #include <string.h>
-
-typedef struct Ast_t {
-
-    Token* token;
-    struct Ast_t* right;
-    struct Ast_t* left;
-    struct Ast_t* extra_ast; //Třetí větev například pro if statement nebo while loop tak v něm bude uložená kondice, můžeme změnit a dát třeba do levé branche kvůli paměti
-    ast_type astType;
-
-    //Tady teda chybí ještě pointer na další strom pro další instrukce (linked list) jak jsme se bavili na dc
-    //struct Ast_t* next_tree;
-
-
-} ast_t;
 
 //Hlavní funkce pro generaci kódu
 int codeGenerator(ast_t** ast, SymTable** symTable, const int count)
