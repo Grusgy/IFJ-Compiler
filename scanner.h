@@ -49,7 +49,6 @@
         TYPE(TOK_LPAR) \
         TYPE(TOK_RPAR) \
         TYPE(TOK_ASSIGN) \
-        TYPE(TOK_DOT) \
         TYPE(TOK_COMMA) \
         TYPE(TOK_EOF)
 
@@ -119,7 +118,6 @@ typedef enum token_type {
     TOK_LPAR,
     TOK_RPAR,
     TOK_ASSIGN,
-    TOK_DOT,
     TOK_COMMA,
     TOK_EOF
 } TokenType;
