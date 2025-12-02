@@ -3,6 +3,7 @@
 
 // Debugging macro - prints token type as string (TOKENTYPE_STRING[token->type])
 #define FOREACH_TOKENTYPE(TYPE) \
+        TYPE(TOK_PROLOG) \
         TYPE(TOK_CLASS) \
         TYPE(TOK_IF) \
         TYPE(TOK_ELSE) \
@@ -14,6 +15,7 @@
         TYPE(TOK_IFJ) \
         TYPE(TOK_STATIC) \
         TYPE(TOK_IMPORT) \
+        TYPE(TOK_FOR) \
         TYPE(TOK_TYPE_NUM) \
         TYPE(TOK_TYPE_STRING) \
         TYPE(TOK_TYPE_NULL) \
@@ -61,6 +63,9 @@ static const char *TOKENTYPE_STRING[] = {
 
 // Token types
 typedef enum token_type {
+    // Prolog
+    TOK_PROLOG,
+
     // Keywords
     TOK_CLASS,
     TOK_IF,
@@ -73,6 +78,7 @@ typedef enum token_type {
     TOK_IFJ,
     TOK_STATIC,
     TOK_IMPORT,
+    TOK_FOR,
     TOK_TYPE_NUM,
     TOK_TYPE_STRING,
     TOK_TYPE_NULL,

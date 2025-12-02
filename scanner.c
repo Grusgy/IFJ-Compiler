@@ -7,11 +7,18 @@
 // FSM states
 typedef enum {
     STATE_START,
+
+    STATE_PROLOG_QUOTES,
+    STATE_PROLOG_FOR,
+    STATE_PROLOG_IFJ,
+
     STATE_ID_KEYWORD,
     STATE_GLOBAL_ID,
+
     STATE_BUILTIN_NAMESPACE,
     STATE_BUILTIN_DOT,
     STATE_BUILTIN_FUNC,
+
     STATE_DEC_INT,
     STATE_HEX_INT,
     STATE_NUM,
@@ -73,8 +80,8 @@ int buffer_update(Buffer *buffer, char chr) {
 
 // Return specific keyword token or identifier token
 TokenType keyword_id(const char *str) {
-    char *keywords[] = {"class", "if", "else", "is", "null", "return", "var", "while", "Ifj", "static", "import", "Num", "String", "Null"};
-    TokenType types[] = {TOK_CLASS, TOK_IF, TOK_ELSE, TOK_IS, TOK_NULL, TOK_RETURN, TOK_VAR, TOK_WHILE, TOK_IFJ, TOK_STATIC, TOK_IMPORT, TOK_TYPE_NUM, TOK_TYPE_STRING, TOK_TYPE_NULL};
+    char *keywords[] = {"class", "if", "else", "is", "null", "return", "var", "while", "Ifj", "static", "import", "for", "Num", "String", "Null"};
+    TokenType types[] = {TOK_CLASS, TOK_IF, TOK_ELSE, TOK_IS, TOK_NULL, TOK_RETURN, TOK_VAR, TOK_WHILE, TOK_IFJ, TOK_STATIC, TOK_IMPORT, TOK_FOR, TOK_TYPE_NUM, TOK_TYPE_STRING, TOK_TYPE_NULL};
 
     for (int i = 0; i < 14; i++) {
         if (strcmp(str, keywords[i]) == 0) {
@@ -307,6 +314,10 @@ int get_next_token(Token *token) {
                     return 99;
                 }
                 token->type = keyword_id(buffer.data);
+                if (token->type == TOK_IMPORT) {
+                    state = STATE_PROLOG_QUOTES;
+                    break;
+                }
                 if (token->type == TOK_IFJ) {
                     state = STATE_BUILTIN_NAMESPACE;
                     break;
@@ -321,6 +332,92 @@ int get_next_token(Token *token) {
                 strcpy(token->data.str_value, buffer.data);
                 goto cleanup_return_0;
             
+            // Read 'import' - ignore whitespace and newline, check for '"ifj25"'
+            case STATE_PROLOG_QUOTES:
+                if (isblank(chr) || chr == '\n') {
+                    break;
+                }
+                if (chr != '\"') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'i') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'f') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'j') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != '2') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != '5') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != '\"') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                state = STATE_PROLOG_FOR;
+                break;
+            
+            // Read 'import "ifj25"' - ignore whitespace, check for 'for'
+            case STATE_PROLOG_FOR:
+                if (isblank(chr)) {
+                    break;
+                }
+                if (chr != 'f') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'o') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'r') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                state = STATE_PROLOG_IFJ;
+                break;
+
+            case STATE_PROLOG_IFJ:
+                if (isblank(chr) || chr == '\n') {
+                    break;
+                }
+                if (chr != 'I') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'f') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                chr = getchar();
+                if (chr != 'j') {
+                    ungetc(chr, stdin);
+                    goto cleanup_return_1;
+                }
+                token->type = TOK_PROLOG;
+                goto cleanup_return_0;
+
+
             // Read "Ifj" - ignore whitespace, check for '.'
             case STATE_BUILTIN_NAMESPACE:
                 if (chr == '.') {
