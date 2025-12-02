@@ -3,87 +3,88 @@
 //
 
 #include "generator.h"
-#include "scanner.h"
-#include "ast.h"
-
 
 #include <stdio.h>
 #include <string.h>
 
 //Hlavní funkce pro generaci kódu
-int codeGenerator(ast_t** ast, SymTable** symTable, const int count)
+int codeGenerator(Stmt* stmt)
 {
+    Stmt* currentStmt = stmt;
 
-    for (int i = 0; i < count; i++) {
-        getCode(ast[i], symTable);
+    while (currentStmt != NULL) {
+        getCode(stmt);
+        currentStmt = currentStmt->next;
     }
 
     return 0;
 }
 
 //Tato funkce tak vyhodnotí jeden strom
-void getCode(const ast_t* ast, SymTable** symTable) {
+void getCode(Stmt* stmt) {
 
-    if (ast->token == NULL) {
+    if (stmt == NULL) {
 
     }
-    else if (ast->token->type == TOK_IF) {
+    else if (stmt->type == STMT_BLOCK) {
+        codeGenerator(stmt->as.block.first);
+    }
+    else if (stmt->type == STMT_IF) {
         char* ifName = getNewName();
-        evaluate(ast->extra_ast, symTable);
-        printJumpComparison(ast->extra_ast, ifName);
-        getCode(ast->left, symTable);
+        evaluate(stmt->as.if_stmt.cond);
+        printJumpComparison(stmt->as.if_stmt.cond, ifName);
+        codeGenerator(stmt->as.if_stmt.then_branch);
         printf("LABEL %s\n", ifName);
-        getCode(ast->right, symTable);
-        printf("LABEL %s\n_", ifName);
+        codeGenerator(stmt->as.if_stmt.else_branch);
+        printf("LABEL %s_\n", ifName);
     }
-    else if (ast->token->type == TOK_WHILE) {
+    else if (stmt->type == STMT_WHILE) {
         char* whileName = getNewName();
         printf("LABEL %s\n", whileName);
-        evaluate(ast->extra_ast, symTable);
-        printJumpComparison(ast->extra_ast, whileName);
-        getCode(ast->left, symTable);
+        evaluate(stmt->as.while_loop.cond);
+        printJumpComparison(stmt->as.while_loop.cond, whileName);
+        codeGenerator(stmt->as.while_loop.block);
         printf("JUMP %s\n", whileName);
         printf("LABEL %s_\n", whileName);
     }
-    else if (ast->token->type == TOK_VAR) {
+    else if (stmt->type == STMT_VAR_DECL) {
         printf("DEFVAR %s\n", getNewName());
     }
-    else if (ast->token->type == TOK_ID) {
-        if (ast->astType == AST_ASSIGN) {
-            evaluate(ast->right, symTable);
-            printf("POPS %s\n", getNewName());
-        }
-        else if (ast->astType == AST_FUN){
-            printf("LABEL %s\n", getNewName());
-            printf("CREATEFRAME\n");
-            printf("PUSHFRAME\n");
-            printPopParams(ast->right, symTable);
-            getCode(ast->right, symTable);
-            printf("POPFRAME\n");
-            printf("RETURN\n");
-        }
-        else if (ast->astType == AST_FUN_CALL) {
-            printPushParams(ast->right, symTable);
-            printf("CALL %s\n", getVarName(ast->extra_ast->token));
-        }
+    else if (stmt->type == STMT_ASSIGN) {
+        evaluate(stmt->as.assign.expr);
+        printf("POPS %s\n", getNewName());
     }
-    else if (ast->token->type == TOK_RETURN) {
-        printf("PUSHS %s\n", getVarName(ast->right->token));
+    else if (stmt->type == STMT_FUN_DECL) {
+        printf("LABEL %s\n", getNewName());
+        printf("CREATEFRAME\n");
+        printf("PUSHFRAME\n");
+        //printPopParams(ast->right, symTable);     dodělat parametry
+        codeGenerator(stmt->as.fun_dec.fun_block);
+        printf("POPFRAME\n");
+        printf("RETURN\n");
     }
-
-
+    else if (stmt->type == STMT_FUN_CALL) {
+        //printPushParams(ast->right);              dodělat parametry
+        printf("CALL %s\n", getVarName());
+    }
+    else if (stmt->type == STMT_RETURN) {
+        printf("PUSHS %s\n", getVarName());
+    }
 }
 
-//Tato funkce ještě není zdaleka hotová, budu ji dělat dneska
-//Má vyhodnotit nějakej příklad např když máme y=3*x+10 tak tahle funkce dostane 3*x+10 a vyhodnotí tuto pravou část rovnice
-void evaluate(const ast_t* ast, SymTable** symTable) {
-    if (ast->astType == AST_ASSIGN) {
+//Tato funkce má vyhodnotit nějakej příklad např když máme y=3*x+10 tak tahle funkce dostane 3*x+10 a vyhodnotí tuto pravou část rovnice
+void evaluate(ast_t* ast) {
+
+    if (ast->token->type == TOK_FUN) { //Zkontrolovat jestli je token id funkce nebo (proměná nebo konstatna)
+        printf("CALL %s\n", getVarName(ast->token));
+    }
+    else {
         if (ast->left == NULL && ast->right == NULL) {
-            printf("PUSHS %s\n", getVarName(ast->token));
+            printf("PUSHS %s\n", getVarName());
         }
         else {
-            getCode(ast->left, symTable);
-            getCode(ast->right, symTable);
+            evaluate(ast->left);
+            evaluate(ast->right);
 
             char* operation;
 
@@ -119,18 +120,11 @@ void evaluate(const ast_t* ast, SymTable** symTable) {
                 case TOK_NEQ:
                     operation = "";
                     break;
-
-
                 default: operation = "";
             }
 
-
             printf("%s\n", operation);
         }
-    }
-    else if (ast->astType == AST_FUN) {
-        printf("CALL %s\n", getVarName(ast->token));
-        printf("POPS %s\n", getNewName());
     }
 }
 
@@ -171,16 +165,9 @@ void printJumpComparison(const ast_t* ast, char* name) {
 }
 
 //Tuto funkci budu dělat taky dneska ee čekám na symtable
-char* getVarName(const Token* token) {
-    //switch (token->data.FrameType) {
-    //    case FR_GF:
-    //        return strcat("GF@", token->data.str_value);
-    //    case FR_LF:
-    //        return strcat("LF@", token->data.str_value);
-    //    case FR_TF:
-    //        return strcat("TF@", token->data.str_value);
-    //}
-    return NULL;
+char* getVarName() {
+
+    return "";
 }
 
 //Taky čekám na symtable
