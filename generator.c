@@ -24,11 +24,8 @@ void codeGenerator(Stmt* stmt) {
 //Tato funkce tak vyhodnotí jeden strom
 void getCode(const Stmt* stmt) {
 
-    if (stmt == NULL) {
-
-    }
     //V případě if statementu tak strom obsahuje block then částí a block else části
-    else if (stmt->type == STMT_BLOCK) {
+    if (stmt->type == STMT_BLOCK) {
         codeGenerator(stmt->as.block.first);
     }
     //Vyhodnocení if statementu
@@ -341,16 +338,19 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
             while_counter++;
             break;
         case NAME_VAR:
-            *resultName = malloc(strlen(currentName)+5);
-            snprintf(*resultName, strlen(currentName)+5, "%s$var", currentName);
+            *resultName = malloc(strlen(currentName)+8);
+            if (currentName[0] == '_' && currentName[1] == '_')
+                snprintf(*resultName, strlen(currentName)+8, "GF_%s$var", currentName);
+            else
+                snprintf(*resultName, strlen(currentName)+8, "LF_%s$var", currentName);
             break;
         case NAME_FUN:
             *resultName = malloc(strlen(currentName)+5);
             snprintf(*resultName, strlen(currentName)+5, "%s$fun", currentName);
             break;
         case NAME_TEMP:
-            *resultName = malloc(4+tempVar_counter/10);
-            snprintf(*resultName, 4+tempVar_counter/10, "T$%i", tempVar_counter);
+            *resultName = malloc(7+tempVar_counter/10);
+            snprintf(*resultName, 7+tempVar_counter/10, "LF_T$%i", tempVar_counter);
             tempVar_counter++;
             break;
         default:
