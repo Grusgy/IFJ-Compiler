@@ -1,11 +1,19 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11
-FILES = ast.c generator.c parser.c scanner.c stack.c stmt.c symtable.c
 
-.PHONY: ifjc clean
+SRC = ast.c generator.c parser.c scanner.c stack.c stmt.c symtable.c
+OBJ = $(SRC:.c=.o)
+TARGET = ifjc
 
-ifjc: $(FILES)
-	$(CC) $(CFLAGS) -o $@ $(FILES)
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f ifjc
+	rm -f $(OBJ) $(TARGET)
