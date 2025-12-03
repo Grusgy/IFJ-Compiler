@@ -1,17 +1,19 @@
-# Kompilátor a flagy (přesně podle zadání)
 CC = gcc
-CFLAGS = -std=c11 -Wall -Wextra -Werror -g
+CFLAGS = -Wall -Wextra -std=c11
 
-# Všechny zdrojové soubory
-SRC = main.c ast.c generator.c parser.c scanner.c stack.c stmt.c symtable.c
+SRC = ast.c generator.c parser.c scanner.c stack.c stmt.c symtable.c
+OBJ = $(SRC:.c=.o)
+TARGET = ifjc
 
-# Výsledný binární soubor
-TARGET = ifj25
+.PHONY: all clean
 
-# Překlad projektu
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRC)
+all: $(TARGET)
 
-# Vyčištění projektu
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
+
 clean:
-	rm -f $(TARGET)
+	rm -f $(OBJ) $(TARGET)
