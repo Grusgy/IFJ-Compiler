@@ -1,6 +1,8 @@
-//
-// Created by Pavel Bobek on 01.12.2025.
-//
+/*
+Implementace překladače imperativního jazyka IFJ25
+
+    Pavel Bobek:    xbobekp00
+*/
 
 #ifndef IFJ_COMPILER_GENERATOR_H
 #define IFJ_COMPILER_GENERATOR_H
