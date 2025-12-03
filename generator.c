@@ -16,7 +16,7 @@ void codeGenerator(Stmt* stmt) {
     Stmt* currentStmt = stmt;
 
     while (currentStmt != NULL) {
-        getCode(stmt);
+        getCode(currentStmt);
         currentStmt = currentStmt->next;
     }
 }
