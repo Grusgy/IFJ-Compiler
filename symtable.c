@@ -111,7 +111,7 @@ static SymNode *insert_node(SymNode *node, const char *key, SymbolData data, boo
 }
 
 // ===========================================================
-// Vyhledání uzlu podle klíče
+// Vyhledání uzlu podle klíče (jen v jednom stromu)
 // ===========================================================
 static SymNode *find_node(SymNode *node, const char *key) {
     if (!node) return NULL;
@@ -122,14 +122,13 @@ static SymNode *find_node(SymNode *node, const char *key) {
 }
 
 // ===========================================================
-// Uvolnění všech uzlů
+// Uvolnění všech uzlů jednoho stromu
 // ===========================================================
 static void free_node(SymNode *node) {
     if (!node) return;
     free_node(node->left);
     free_node(node->right);
 
-    // Uvolníme podle typu
     if (node->data.kind == SYM_FUNC) {
         free(node->data.data.func.name);
         free(node->data.data.func.params);
@@ -145,22 +144,48 @@ static void free_node(SymNode *node) {
 
 void symtable_init(SymTable *table) {
     table->root = NULL;
+    table->parent = NULL;
+}
+
+// nový scope s daným rodičem
+void symtable_init_child(SymTable *child, SymTable *parent) {
+    child->root = NULL;
+    child->parent = parent;
 }
 
 void symtable_free(SymTable *table) {
     free_node(table->root);
     table->root = NULL;
+    // parent NEuvolňujeme, ten vlastní někdo jiný
 }
 
-bool symtable_insert(SymTable *table, const char *key, SymbolData data) {
+// vloží symbol pouze do aktuální tabulky
+bool symtable_insert_here(SymTable *table, const char *key, SymbolData data) {
     bool ok = true;
     table->root = insert_node(table->root, key, data, &ok);
     return ok;
 }
 
-SymbolData *symtable_find(SymTable *table, const char *key) {
+// zpětně kompatibilní alias
+bool symtable_insert(SymTable *table, const char *key, SymbolData data) {
+    return symtable_insert_here(table, key, data);
+}
+
+// hledá jen v aktuální tabulce
+SymbolData *symtable_find_here(SymTable *table, const char *key) {
     SymNode *n = find_node(table->root, key);
     return n ? &n->data : NULL;
+}
+
+// hledá v aktuální tabulce a všech rodičích
+SymbolData *symtable_find(SymTable *table, const char *key) {
+    SymTable *cur = table;
+    while (cur) {
+        SymNode *n = find_node(cur->root, key);
+        if (n) return &n->data;
+        cur = cur->parent;
+    }
+    return NULL;
 }
 
 bool symtable_delete(SymTable *table, const char *key) {
