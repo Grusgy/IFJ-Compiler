@@ -23,7 +23,7 @@ typedef enum {
 void codeGenerator(Stmt* stmt);
 void getCode(const Stmt* stmt);
 void evaluate(const ast_t* ast);
-void printJumpComparison(const ast_t* ast, char* name);
+void printJumpComparison(const ast_t* ast, char* label, char* symb1, char* symb2);
 void printPopParams(const ast_t* params);
 void printPushParams(const ast_t* params);
 void codegen_getName(nameType name_type, char* currentName, char** resultName);
