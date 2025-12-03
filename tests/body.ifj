@@ -1,3 +1,4 @@
+// Program 2: Vypocet faktorialu (rekurzivne)
 import "ifj25" for Ifj
 class Program {
 // Hlavni funkce
