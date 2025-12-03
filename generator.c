@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int if_counter = 0;
 int while_counter = 0;
@@ -88,14 +89,14 @@ void getCode(const Stmt* stmt) {
 //Tato funkce má vyhodnotit nějakej příklad např když máme y=3*x+10 tak tahle funkce dostane 3*x+10 a vyhodnotí tuto pravou část rovnice
 void evaluate(const ast_t* ast) {
 
-    if (ast->token->type == TOK_VAR ||
-       (ast->token->type >= TOK_CONST_INT && ast->token->type <= TOK_CONST_ML_STR) ||
-       (ast->token->type >= TOK_PLUS && ast->token->type <= TOK_NEQ)) {
+    if (ast->token.type == TOK_VAR ||
+       (ast->token.type >= TOK_CONST_INT && ast->token.type <= TOK_CONST_ML_STR) ||
+       (ast->token.type >= TOK_PLUS && ast->token.type <= TOK_NEQ)) {
 
         if (ast->left == NULL && ast->right == NULL) {
-            if (ast->token->type == TOK_VAR) {
+            if (ast->token.type == TOK_VAR) {
                 char* varName;
-                codegen_getName(NAME_VAR, ast->token->data.str_value, &varName);
+                codegen_getName(NAME_VAR, ast->token.data.str_value, &varName);
                 printf("PUSHS %s\n", varName);
             }
             else {
@@ -108,7 +109,7 @@ void evaluate(const ast_t* ast) {
 
             char* operation;
 
-            switch (ast->token->type) {
+            switch (ast->token.type) {
 
                 case TOK_PLUS:
                     operation = "ADDS";
@@ -148,20 +149,20 @@ void evaluate(const ast_t* ast) {
     }
     else {
         char* funName;
-        codegen_getName(NAME_FUN, ast->token->data.str_value, &funName);
+        codegen_getName(NAME_FUN, ast->token.data.str_value, &funName);
         printf("CALL %s\n", funName);
     }
 }
 
 //Pomocná funkce, která na záčátku deklarace funkce vytiskne deklaraci a přiřazení parametrů
 void printPopParams(const ast_t* params) {
-    const long long int count = params->token->data.num_int_value;
+    const long long int count = params->token.data.num_int_value;
     ast_t* currentPar = params->right;
 
     char* paramsName[MAX_PARAMS];
 
     for (int i = 0; i < count; i++) {
-        codegen_getName(NAME_VAR, currentPar->token->data.str_value, &paramsName[i]);
+        codegen_getName(NAME_VAR, currentPar->token.data.str_value, &paramsName[i]);
         printf("DEFVAR %s\n", paramsName[i]);
         currentPar = currentPar->right;
     }
@@ -173,19 +174,19 @@ void printPopParams(const ast_t* params) {
 
 //Před zavoláním funkce pushne parametry do stacku
 void printPushParams(const ast_t* params) {
-    const long long int count = params->token->data.num_int_value;
+    const long long int count = params->token.data.num_int_value;
     ast_t* currentPar = params->right;
 
     for (long long int i = 0; i < count; i++) {
         char* varName;
-        codegen_getName(NAME_VAR, currentPar->token->data.str_value, &varName);
+        codegen_getName(NAME_VAR, currentPar->token.data.str_value, &varName);
         printf("PUSHS %s\n", varName);
         currentPar = currentPar->right;
     }
 }
 
 void printJumpComparison(const ast_t* ast, char* name) {
-    if (ast->token->type == TOK_EQ)
+    if (ast->token.type == TOK_EQ)
         printf("JUMPIFNEQS %s_\n", name);
     else
         printf("JUMPIFEQS %s_\n", name);
