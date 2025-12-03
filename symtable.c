@@ -1,3 +1,9 @@
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
+
 #include "symtable.h"
 #include <stdlib.h>
 #include <string.h>

@@ -1,5 +1,9 @@
-#include <stdlib.h>
-#include <string.h>
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
+
 #include "parser.h"
 
 // =================== Globální stav ===================
@@ -69,9 +73,45 @@ static int is_builtin_func_token(TokenType t) {
 
 // ================== PARSOVÁNÍ VÝRAZŮ ======================
 
-// dopředu
 static int parse_primary(ast_t **out);
 static int parse_builtin_call(ast_t **out);
+
+// builtin volání: FUNKCE ( expr, expr, ... )
+static int parse_builtin_call(ast_t **out) {
+    Token func_tok = cur_tok;   // Ifj.write / Ifj.read_num / ...
+
+    int rc = next_token();      // za název funkce
+    if (rc) return rc;
+
+    if (cur_tok.type != TOK_LPAR) return 2;
+    rc = next_token();          // za '('
+    if (rc) return rc;
+
+    ast_t *params = NULL;
+    size_t param_count = 0;
+
+    if (cur_tok.type != TOK_RPAR) {
+        rc = parse_expr_argument_list(&params, &param_count);
+        if (rc) return rc;
+    } else {
+        // prázdný seznam parametrů
+        Token header;
+        header.type = TOK_CONST_INT;
+        header.data.num_int_value = 0;
+        params = ast_create_node(&header, NULL, NULL);
+        if (!params) return 99;
+    }
+
+    if (cur_tok.type != TOK_RPAR) return 2;
+    rc = next_token();          // za ')'
+    if (rc) return rc;
+
+    // kořen volání – token funkce, pravý podstrom = seznam parametrů
+    ast_t *call_node = ast_create_node(&func_tok, NULL, params);
+    if (!call_node) return 99;
+    *out = call_node;
+    return 0;
+}
 
 static int parse_primary(ast_t **out) {
     // závorky
@@ -103,28 +143,25 @@ static int parse_primary(ast_t **out) {
         return parse_builtin_call(out);
     }
 
-    // --- uživatelské funkce a identifikátory -----------------
-    if (cur_tok.type == TOK_ID) {
-        // uložíme si kopii tokenu se jménem
-        Token id_tok = cur_tok;
-
-        int rc = next_token();     // podíváme se, co je za id
+    // ID / GLOBAL_ID – může být proměnná NEBO volání funkce
+    if (cur_tok.type == TOK_ID || cur_tok.type == TOK_GLOBAL_ID) {
+        Token id_tok = cur_tok;          // zkopírujeme token na zásobník
+        int rc = next_token();           // posuneme se za ID
         if (rc) return rc;
 
-        // varianta 1: volání funkce id(expr, ...)
+        // varianta: volání funkce id(expr, expr, ...)
         if (cur_tok.type == TOK_LPAR) {
-            rc = next_token();     // za '('
+            rc = next_token();           // za '('
             if (rc) return rc;
 
             ast_t *params = NULL;
             size_t param_count = 0;
 
             if (cur_tok.type != TOK_RPAR) {
-                // argumenty jsou výrazy
                 rc = parse_expr_argument_list(&params, &param_count);
                 if (rc) return rc;
             } else {
-                // žádné argumenty → hlavičkový uzel s počtem 0
+                // žádné argumenty
                 Token header;
                 header.type = TOK_CONST_INT;
                 header.data.num_int_value = 0;
@@ -133,39 +170,31 @@ static int parse_primary(ast_t **out) {
             }
 
             if (cur_tok.type != TOK_RPAR) return 2;
-            rc = next_token();     // za ')'
+            rc = next_token();           // za ')'
             if (rc) return rc;
 
-            // kořen volání – token funkce, pravý podstrom = seznam parametrů
             ast_t *call_node = ast_create_node(&id_tok, NULL, params);
             if (!call_node) return 99;
             *out = call_node;
             return 0;
         }
 
-        // varianta 2: jen proměnná (žádné závorky)
-        ast_t *node = ast_create_node(&id_tok, NULL, NULL);
-        if (!node) return 99;
-        *out = node;
+        // jinak: obyčejná proměnná
+        ast_t *var_node = ast_create_node(&id_tok, NULL, NULL);
+        if (!var_node) return 99;
+        *out = var_node;
         return 0;
     }
 
-    // GLOBAL_ID a literály
-    if (cur_tok.type == TOK_GLOBAL_ID ||
-        cur_tok.type == TOK_CONST_INT ||
+    // ostatní literály
+    if (cur_tok.type == TOK_CONST_INT ||
         cur_tok.type == TOK_CONST_FLOAT ||
         cur_tok.type == TOK_CONST_STR ||
         cur_tok.type == TOK_CONST_ML_STR)
     {
-        ast_t *node = ast_create_node(&cur_tok, NULL, NULL);
-        if (!node) return 99;
-
-        // vlastnictví případného str_value přechází na AST
-        int rc = next_token();
-        if (rc) return rc;
-
-        *out = node;
-        return 0;
+        *out = ast_create_node(&cur_tok, NULL, NULL);
+        if (!*out) return 99;
+        return next_token();
     }
 
     return 2; // syntaktická chyba
@@ -207,43 +236,6 @@ static int parse_expression(ast_t **out_expr) {
     if (rc) return rc;
 
     return parse_binop_rhs(1, lhs, out_expr);
-}
-
-// builtin volání: FUNKCE ( expr, expr, ... )
-static int parse_builtin_call(ast_t **out) {
-    Token func_tok = cur_tok;   // Ifj.write / Ifj.read_num / ...
-
-    int rc = next_token();      // za název funkce
-    if (rc) return rc;
-
-    if (cur_tok.type != TOK_LPAR) return 2;
-    rc = next_token();          // za '('
-    if (rc) return rc;
-
-    ast_t *params = NULL;
-    size_t param_count = 0;
-
-    if (cur_tok.type != TOK_RPAR) {
-        rc = parse_expr_argument_list(&params, &param_count);
-        if (rc) return rc;
-    } else {
-        // prázdný seznam parametrů
-        Token header;
-        header.type = TOK_CONST_INT;
-        header.data.num_int_value = 0;
-        params = ast_create_node(&header, NULL, NULL);
-        if (!params) return 99;
-    }
-
-    if (cur_tok.type != TOK_RPAR) return 2;
-    rc = next_token();          // za ')'
-    if (rc) return rc;
-
-    // kořen volání – token funkce, pravý podstrom = seznam parametrů
-    ast_t *call_node = ast_create_node(&func_tok, NULL, params);
-    if (!call_node) return 99;
-    *out = call_node;
-    return 0;
 }
 
 // ================== SEZNAM ARGUMENTŮ ======================
@@ -295,7 +287,6 @@ static int parse_expr_argument_list(ast_t **params_out, size_t *count_out) {
     ast_t *last  = NULL;
     size_t count = 0;
 
-    // první argument
     ast_t *arg = NULL;
     int rc = parse_expression(&arg);
     if (rc) return rc;
@@ -338,7 +329,6 @@ static int parse_var_decl(Stmt **out_stmt, SymTable *symtable) {
     if (cur_tok.type != TOK_ID) return 2;
     char *id_name = cur_tok.data.str_value;
 
-    // sémantika: nesmí být redefinice
     if (symtable_find(symtable, id_name) != NULL) {
         return 3; // redeklarace
     }
@@ -346,7 +336,7 @@ static int parse_var_decl(Stmt **out_stmt, SymTable *symtable) {
     Stmt *stmt = stmt_create(STMT_VAR_DECL);
     if (!stmt) return 99;
 
-    stmt->as.var_decl.var_name = id_name;   // vlastnictví stringu přechází na Stmt
+    stmt->as.var_decl.var_name = id_name;
     stmt->as.var_decl.expr = NULL;
 
     SymbolData sym = symbol_make_var(TYPE_UNDEF, false);
@@ -355,7 +345,6 @@ static int parse_var_decl(Stmt **out_stmt, SymTable *symtable) {
     rc = next_token();  // za ID
     if (rc) return rc;
 
-    // volitelná inicializace: var x = expr
     if (cur_tok.type == TOK_ASSIGN) {
         rc = next_token(); // za '='
         if (rc) return rc;
@@ -389,12 +378,10 @@ static int parse_id_statement(Stmt **out_stmt, SymTable *symtable) {
     if (cur_tok.type == TOK_ASSIGN) {
         SymbolData *found = symtable_find(symtable, id_name);
 
-        // lokální ID musí existovat
         if ((!found || found->kind != SYM_VAR) && !is_global) {
-            return 3; // použití nedefinované proměnné
+            return 3;
         }
 
-        // GLOBAL_ID (typicky "__d") – pokud neexistuje, vytvoříme dummy var
         if ((!found || found->kind != SYM_VAR) && is_global) {
             SymbolData sym = symbol_make_var(TYPE_UNDEF, true);
             if (!symtable_insert(symtable, id_name, sym)) return 99;
@@ -424,7 +411,7 @@ static int parse_id_statement(Stmt **out_stmt, SymTable *symtable) {
         return 0;
     }
 
-    // varianta 2: volání uživatelské funkce id(...)
+    // varianta 2: volání user funkce id(a, b, c) jako samotný příkaz (pokud by bylo potřeba)
     if (cur_tok.type == TOK_LPAR) {
         Stmt *stmt = stmt_create(STMT_FUN_CALL);
         if (!stmt) return 99;
@@ -485,7 +472,7 @@ static int parse_while(Stmt **out_stmt, SymTable *symtable) {
 
 // return [id | __global]
 static int parse_return_stmt(Stmt **out_stmt, SymTable *symtable) {
-    (void)symtable; // zatím nepoužité
+    (void)symtable;
 
     Stmt *stmt = stmt_create(STMT_RETURN);
     if (!stmt) return 99;
@@ -494,7 +481,6 @@ static int parse_return_stmt(Stmt **out_stmt, SymTable *symtable) {
     int rc = next_token(); // za "return"
     if (rc) return rc;
 
-    // return bez hodnoty (void)
     if (cur_tok.type == TOK_EOL ||
         cur_tok.type == TOK_RBRACE ||
         cur_tok.type == TOK_EOF)
@@ -632,7 +618,6 @@ static int parse_statement(Stmt **out_stmt, SymTable *symtable) {
 
 // ================== Funkce (static main, static factorial...) ==================
 
-// static name(param1, param2) { body }
 static int parse_fun_decl(Stmt **out_stmt, SymTable *symtable) {
     int rc = next_token();  // za "static"
     if (rc) return rc;
@@ -659,7 +644,6 @@ static int parse_fun_decl(Stmt **out_stmt, SymTable *symtable) {
     rc = next_token();      // za ')'
     if (rc) return rc;
 
-    // přeskočit prázdné řádky před '{'
     while (cur_tok.type == TOK_EOL) {
         rc = next_token();
         if (rc) return rc;
@@ -669,7 +653,6 @@ static int parse_fun_decl(Stmt **out_stmt, SymTable *symtable) {
     rc = parse_block(&body_block, symtable);
     if (rc) return rc;
 
-    // vložíme funkci do tabulky symbolů
     SymbolData f = symbol_make_func(fun_name, TYPE_UNDEF, param_count);
     if (!symtable_insert(symtable, fun_name, f)) return 99;
 
@@ -686,22 +669,6 @@ static int parse_fun_decl(Stmt **out_stmt, SymTable *symtable) {
 
 // ================== HLAVNÍ FUNKCE PARSERU ==================
 
-// Program:
-//  [import "ifj25" for Ifj]
-//  class Program {
-//      static main() { ... }
-//      static factorial(n) { ... }
-//      ...
-//  }
-// ================== HLAVNÍ FUNKCE PARSERU ==================
-
-// Program (zjednodušeně):
-//   [nějaké věci před class - prolog, komentáře, EOL...]
-//   class Program {
-//       static main(...) { ... }
-//       static factorial(...) { ... }
-//       ...
-//   }
 int parse_program(Stmt **stmts_out, SymTable *symtable) {
     *stmts_out = NULL;
     symtable_init(symtable);
@@ -709,28 +676,23 @@ int parse_program(Stmt **stmts_out, SymTable *symtable) {
     int rc = next_token();
     if (rc) return rc;
 
-    // 1) Pro jistotu: přeskočíme úplně VŠECHNO, dokud nenarazíme na 'class'
-    //    (TOK_CLASS), nebo EOF.
+    // přeskočit všechno, dokud nenarazíme na 'class' nebo EOF
     while (cur_tok.type != TOK_CLASS && cur_tok.type != TOK_EOF) {
         rc = next_token();
         if (rc) return rc;
     }
 
     if (cur_tok.type != TOK_CLASS) {
-        // nedošli jsme ke 'class' -> syntaktická chyba programu
         return 2;
     }
 
-    // 2) class Program
     rc = next_token();       // za 'class'
     if (rc) return rc;
 
-    if (cur_tok.type != TOK_ID) return 2;  // název třídy (Program)
-    // jméno třídy teď neukládáme do symtable
-    rc = next_token();
+    if (cur_tok.type != TOK_ID) return 2;
+    rc = next_token();       // za jméno třídy
     if (rc) return rc;
 
-    // přeskočíme prázdné řádky
     while (cur_tok.type == TOK_EOL) {
         rc = next_token();
         if (rc) return rc;
@@ -743,9 +705,7 @@ int parse_program(Stmt **stmts_out, SymTable *symtable) {
     Stmt *first = NULL;
     Stmt *last  = NULL;
 
-    // 3) tělo třídy – očekáváme jen 'static' funkce, plus EOL
     while (cur_tok.type != TOK_RBRACE && cur_tok.type != TOK_EOF) {
-        // přeskočíme prázdné řádky
         while (cur_tok.type == TOK_EOL) {
             rc = next_token();
             if (rc) return rc;
@@ -753,7 +713,6 @@ int parse_program(Stmt **stmts_out, SymTable *symtable) {
         if (cur_tok.type == TOK_RBRACE || cur_tok.type == TOK_EOF) break;
 
         if (cur_tok.type != TOK_STATIC) {
-            // uvnitř třídy něco jiného než 'static' => zatím neznáme, bereme jako chybu
             return 2;
         }
 
@@ -772,16 +731,13 @@ int parse_program(Stmt **stmts_out, SymTable *symtable) {
     rc = next_token();    // za '}'
     if (rc) return rc;
 
-    // přeskočíme případné EOL na konci souboru
     while (cur_tok.type == TOK_EOL) {
         rc = next_token();
         if (rc) return rc;
     }
 
-    // za třídou už nechceme vidět nic jiného než EOF
     if (cur_tok.type != TOK_EOF) return 2;
 
     *stmts_out = first;
     return 0;
 }
-

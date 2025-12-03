@@ -1,5 +1,11 @@
 #ifndef IFJ_COMPILER_STMT_H
 #define IFJ_COMPILER_STMT_H
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
+
 
 #include "ast.h"
 #include "symtable.h"

@@ -1,5 +1,10 @@
 #ifndef IFJ_COMPILER_AST_H
 #define IFJ_COMPILER_AST_H
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
 
 #include "scanner.h"
 
