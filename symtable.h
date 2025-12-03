@@ -1,5 +1,10 @@
 #ifndef IFJ_COMPILER_SYMTABLE_H
 #define IFJ_COMPILER_SYMTABLE_H
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
 
 #include <stdbool.h>
 #include <stddef.h>

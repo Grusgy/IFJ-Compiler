@@ -1,3 +1,9 @@
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
+
 #include <stdlib.h>
 #include "ast.h"
 
