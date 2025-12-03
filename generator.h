@@ -29,6 +29,6 @@ void printJumpComparison(const ast_t* ast, char* label, char* symb1, char* symb2
 void printPopParams(const ast_t* params);
 void printPushParams(const ast_t* params);
 void codegen_getName(nameType name_type, char* currentName, char** resultName);
-
+void convertString(const char* defaultS, char** string);
 
 #endif //IFJ_COMPILER_GENERATOR_H

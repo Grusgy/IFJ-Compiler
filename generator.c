@@ -45,13 +45,22 @@ void getCode(const Stmt* stmt) {
         codegen_getName(NAME_TEMP, "", &tempVal);
         printf("DEFVAR %s\n", tempVal);
         printf("POPS %s\n", tempVal);
-        printJumpComparison(stmt->as.if_stmt.cond, ifName, tempVal, "false");
+        char* falseConst;
+        codegen_getName(NAME_TEMP, "", &falseConst);
+        printf("DEFVAR %s\n", falseConst);
+        printf("PUSHS int@0\n");
+        printf("PUSHS int@1\n");
+        printf("EQS\n");
+        printf("POPS %s\n", falseConst);
+        printJumpComparison(stmt->as.if_stmt.cond, ifName, tempVal, falseConst);
         codeGenerator(stmt->as.if_stmt.then_branch);
         printf("JUMP %s\n", ifName);
         printf("LABEL %s_\n", ifName);
         codeGenerator(stmt->as.if_stmt.else_branch);
         printf("LABEL %s\n", ifName);
         free(ifName);
+        free(tempVal);
+        free(falseConst);
     }
     //Vyhodnocení while statementu
     else if (stmt->type == STMT_WHILE) {
@@ -63,11 +72,20 @@ void getCode(const Stmt* stmt) {
         codegen_getName(NAME_TEMP, "", &tempVal);
         printf("DEFVAR %s\n", tempVal);
         printf("POPS %s\n", tempVal);
-        printJumpComparison(stmt->as.while_loop.cond, whileName, tempVal, "false");
+        char* falseConst;
+        codegen_getName(NAME_TEMP, "", &falseConst);
+        printf("DEFVAR %s\n", tempVal);
+        printf("PUSHS int@0\n");
+        printf("PUSHS int@1\n");
+        printf("EQS\n");
+        printf("POPS %s\n", falseConst);
+        printJumpComparison(stmt->as.while_loop.cond, whileName, tempVal, falseConst);
         codeGenerator(stmt->as.while_loop.block);
         printf("JUMP %s\n", whileName);
         printf("LABEL %s_\n", whileName);
         free(whileName);
+        free(tempVal);
+        free(falseConst);
     }
     //vyhodnocení deklarace proměnné a popřípadě přiřazení hodnoty
     else if (stmt->type == STMT_VAR_DECL) {
@@ -140,7 +158,7 @@ void evaluate(const ast_t* ast) {
             }
             //Pushne konstantu na zásobník
             else {
-                printf("PUSHS %lld\n", ast->token.data.num_int_value);
+                printf("PUSHS int@%lld\n", ast->token.data.num_int_value);
             }
         }
         //V tommto případě je token znaménko tak jenom uděláme jeho operaci nad zásobníkem
@@ -181,7 +199,7 @@ void evaluate(const ast_t* ast) {
                     operation = "EQS";
                     break;
                 case TOK_NEQ:
-                    operation = "NEQS";
+                    operation = "EQS\nNOTS";
                     break;
                 default: operation = "";
             }
@@ -191,7 +209,18 @@ void evaluate(const ast_t* ast) {
     }
     //Speciální vestavěné funkce
     else if (ast->token.type == TOK_FUNC_WRITE) {
-        printf("WRITE %s\n", ast->right->right->token.data.str_value);
+        if (ast->right->right->token.type == TOK_ID) {
+            char* tokenName;
+            codegen_getName(NAME_VAR, ast->right->right->token.data.str_value, &tokenName);
+            printf("WRITE %s\n", tokenName);
+            free(tokenName);
+        }
+        else {
+            char* result;
+            convertString(ast->right->right->token.data.str_value, &result);
+            printf("WRITE %s\n", result);
+            free(result);
+        }
     }
     else if (ast->token.type == TOK_FUNC_READ_NUM) {
         char* tempVal;
@@ -223,8 +252,12 @@ void evaluate(const ast_t* ast) {
         printf("DEFVAR %s\n", tempVal);
         if (ast->right->right->token.type == TOK_CONST_FLOAT)
             printf("FLOAT2INT %s %s\n",tempVal, ast->right->right->token.data.num_float_value);
-        else
-            printf("MOVE %s %s\n", tempVal, ast->right->right->token.data.str_value);
+        else {
+            char* tokenName;
+            codegen_getName(NAME_VAR, ast->right->right->token.data.str_value, &tokenName);
+            printf("MOVE %s %s\n", tempVal, tokenName);
+            free(tokenName);
+        }
         printf("PUSHS %s\n", tempVal);
         free(tempVal);
     }
@@ -256,8 +289,12 @@ void evaluate(const ast_t* ast) {
         printf("DEFVAR %s\n", tempVal);
         if (ast->right->right->token.type == TOK_CONST_FLOAT)
             printf("FLOAT2STR %s %s\n", tempVal, ast->right->right->token.data.num_float_value);
-        else
-            printf("FLOAT2STR %s %s\n", tempVal, ast->right->right->token.data.str_value);
+        else {
+            char* tokenName;
+            codegen_getName(NAME_VAR, ast->right->right->token.data.str_value, &tokenName);
+            printf("FLOAT2STR %s %s\n", tempVal, tokenName);
+            free(tokenName);
+        }
         printf("WRITE %s\n", tempVal);
         free(tempVal);
     }
@@ -266,6 +303,9 @@ void evaluate(const ast_t* ast) {
     }
     else if (ast->token.type == TOK_FUNC_SUBSTRING) {
 
+    }
+    else if (ast->token.type == TOK_NULL) {
+        printf("PUSHS nil@nil\n");
     }
     //V případě že token je funkce zavoláme ji a její návratová hodnota zůstane na zásobníku
     else {
@@ -325,6 +365,33 @@ void printJumpComparison(const ast_t* ast, char* label, char* symb1, char* symb2
         printf("JUMPIFEQ %s_ %s %s\n", label, symb1, symb2);
 }
 
+void convertString(const char* defaultS, char** string) {
+    int j = 7;
+    *string = malloc(100);
+    (*string)[0] = 's';
+    (*string)[1] = 't';
+    (*string)[2] = 'r';
+    (*string)[3] = 'i';
+    (*string)[4] = 'n';
+    (*string)[5] = 'g';
+    (*string)[6] = '@';
+    for (int i = 0; defaultS[i] != '\0'; i++) {
+        if (defaultS[i] == ' ') {
+            if (j + 3 >= 100)
+                break;
+            (*string)[j++] = '\\';
+            (*string)[j++] = '0';
+            (*string)[j++] = '3';
+            (*string)[j++] = '2';
+        } else {
+            if (j + 1 >= 100) break;
+            (*string)[j++] = defaultS[i];
+        }
+    }
+
+    (*string)[j] = '\0';
+}
+
 void codegen_getName(const nameType name_type, char* currentName, char** resultName) {
 
     //Globální countery
@@ -348,9 +415,9 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
         case NAME_VAR:
             *resultName = malloc(strlen(currentName)+8);
             if (currentName[0] == '_' && currentName[1] == '_')
-                snprintf(*resultName, strlen(currentName)+8, "GF_%s$var", currentName);
+                snprintf(*resultName, strlen(currentName)+8, "GF@%s$var", currentName);
             else
-                snprintf(*resultName, strlen(currentName)+8, "LF_%s$var", currentName);
+                snprintf(*resultName, strlen(currentName)+8, "LF@%s$var", currentName);
             break;
         case NAME_FUN:
             *resultName = malloc(strlen(currentName)+5);
@@ -358,7 +425,7 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
             break;
         case NAME_TEMP:
             *resultName = malloc(7+tempVar_counter/10);
-            snprintf(*resultName, 7+tempVar_counter/10, "LF_T$%i", tempVar_counter);
+            snprintf(*resultName, 7+tempVar_counter/10, "LF@T$%i", tempVar_counter);
             tempVar_counter++;
             break;
         default:
