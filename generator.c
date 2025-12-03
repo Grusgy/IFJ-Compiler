@@ -35,11 +35,16 @@ void getCode(const Stmt* stmt) {
         char* ifName;
         codegen_getName(NAME_IF, "", &ifName);
         evaluate(stmt->as.if_stmt.cond);
-        printJumpComparison(stmt->as.if_stmt.cond, ifName);
+        char* tempVal;
+        codegen_getName(NAME_TEMP, "", &tempVal);
+        printf("DEFVAR %s\n", tempVal);
+        printf("POPS %s\n", tempVal);
+        printJumpComparison(stmt->as.if_stmt.cond, ifName, tempVal, "false");
         codeGenerator(stmt->as.if_stmt.then_branch);
-        printf("LABEL %s\n", ifName);
-        codeGenerator(stmt->as.if_stmt.else_branch);
+        printf("JUMP %s\n", ifName);
         printf("LABEL %s_\n", ifName);
+        codeGenerator(stmt->as.if_stmt.else_branch);
+        printf("LABEL %s\n", ifName);
         free(ifName);
     }
     else if (stmt->type == STMT_WHILE) {
@@ -47,7 +52,11 @@ void getCode(const Stmt* stmt) {
         codegen_getName(NAME_WHILE, "", &whileName);
         printf("LABEL %s\n", whileName);
         evaluate(stmt->as.while_loop.cond);
-        printJumpComparison(stmt->as.while_loop.cond, whileName);
+        char* tempVal;
+        codegen_getName(NAME_TEMP, "", &tempVal);
+        printf("DEFVAR %s\n", tempVal);
+        printf("POPS %s\n", tempVal);
+        printJumpComparison(stmt->as.while_loop.cond, whileName, tempVal, "false");
         codeGenerator(stmt->as.while_loop.block);
         printf("JUMP %s\n", whileName);
         printf("LABEL %s_\n", whileName);
@@ -57,6 +66,10 @@ void getCode(const Stmt* stmt) {
         char* varName;
         codegen_getName(NAME_VAR, stmt->as.var_decl.var_name, &varName);
         printf("DEFVAR %s\n", varName);
+        if(stmt->as.var_decl.expr != NULL) {
+            evaluate(stmt->as.var_decl.expr);
+            printf("POPS %s\n", varName);
+        }
         free(varName);
     }
     else if (stmt->type == STMT_ASSIGN) {
@@ -96,12 +109,15 @@ void getCode(const Stmt* stmt) {
 //Tato funkce má vyhodnotit nějakej příklad např když máme y=3*x+10 tak tahle funkce dostane 3*x+10 a vyhodnotí tuto pravou část rovnice
 void evaluate(const ast_t* ast) {
 
-    if (ast->token.type == TOK_VAR ||
+    if (ast == NULL)
+        return;
+
+    if (ast->token.type == TOK_ID ||
        (ast->token.type >= TOK_CONST_INT && ast->token.type <= TOK_CONST_ML_STR) ||
        (ast->token.type >= TOK_PLUS && ast->token.type <= TOK_NEQ)) {
 
         if (ast->left == NULL && ast->right == NULL) {
-            if (ast->token.type == TOK_VAR) {
+            if (ast->token.type == TOK_ID) {
                 char* varName;
                 codegen_getName(NAME_VAR, ast->token.data.str_value, &varName);
                 printf("PUSHS %s\n", varName);
@@ -196,11 +212,11 @@ void printPushParams(const ast_t* params) {
     }
 }
 
-void printJumpComparison(const ast_t* ast, char* name) {
+void printJumpComparison(const ast_t* ast, char* label, char* symb1, char* symb2) {
     if (ast->token.type == TOK_EQ)
-        printf("JUMPIFNEQS %s_\n", name);
+        printf("JUMPIFNEQ %s_ %s %s\n", label, symb1, symb2);
     else
-        printf("JUMPIFEQS %s_\n", name);
+        printf("JUMPIFEQ %s_ %s %s\n", label, symb1, symb2);
 }
 
 void codegen_getName(const nameType name_type, char* currentName, char** resultName) {
@@ -212,8 +228,8 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
             if_counter++;
             break;
         case NAME_WHILE:
-            *resultName = malloc(5+while_counter/10);
-            snprintf(*resultName, 5+while_counter/10, "IF$%i", while_counter);
+            *resultName = malloc(8+while_counter/10);
+            snprintf(*resultName, 8+while_counter/10, "WHILE$%i", while_counter);
             while_counter++;
             break;
         case NAME_VAR:
@@ -227,6 +243,7 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
         case NAME_TEMP:
             *resultName = malloc(5+tempVar_counter/10);
             snprintf(*resultName, 5+tempVar_counter/10, "T$%i", tempVar_counter);
+            tempVar_counter++;
             break;
         default:
             *resultName = currentName;
