@@ -39,7 +39,6 @@ void getCode(const Stmt* stmt) {
         printf("LABEL %s\n", ifName);
         codeGenerator(stmt->as.if_stmt.else_branch);
         printf("LABEL %s_\n", ifName);
-        free(ifName);
     }
     else if (stmt->type == STMT_WHILE) {
         char* whileName;
@@ -50,20 +49,17 @@ void getCode(const Stmt* stmt) {
         codeGenerator(stmt->as.while_loop.block);
         printf("JUMP %s\n", whileName);
         printf("LABEL %s_\n", whileName);
-        free(whileName);
     }
     else if (stmt->type == STMT_VAR_DECL) {
         char* varName;
         codegen_getName(NAME_VAR, stmt->as.var_decl.var_name, &varName);
         printf("DEFVAR %s\n", varName);
-        free(varName);
     }
     else if (stmt->type == STMT_ASSIGN) {
         evaluate(stmt->as.assign.expr);
         char* varName;
         codegen_getName(NAME_VAR, stmt->as.assign.var_name, &varName);
         printf("POPS %s\n", varName);
-        free(varName);
     }
     else if (stmt->type == STMT_FUN_DECL) {
         char* funName;
@@ -75,20 +71,17 @@ void getCode(const Stmt* stmt) {
         codeGenerator(stmt->as.fun_dec.fun_block);
         printf("POPFRAME\n");
         printf("RETURN\n");
-        free(funName);
     }
     else if (stmt->type == STMT_FUN_CALL) {
         printPushParams(stmt->as.fun_call.parameters);
         char* funName;
         codegen_getName(NAME_FUN, stmt->as.fun_call.fun_name, &funName);
         printf("CALL %s\n", funName);
-        free(funName);
     }
     else if (stmt->type == STMT_RETURN) {
         char* varName;
         codegen_getName(NAME_VAR, stmt->as.return_.var_name, &varName);
         printf("PUSHS %s\n", varName);
-        free(varName);
     }
 }
 
@@ -104,10 +97,9 @@ void evaluate(const ast_t* ast) {
                 char* varName;
                 codegen_getName(NAME_VAR, ast->token->data.str_value, &varName);
                 printf("PUSHS %s\n", varName);
-                free(varName);
             }
             else {
-                printf("PUSHS %lld\n", ast->token->data.num_int_value);
+
             }
         }
         else {
@@ -158,7 +150,6 @@ void evaluate(const ast_t* ast) {
         char* funName;
         codegen_getName(NAME_FUN, ast->token->data.str_value, &funName);
         printf("CALL %s\n", funName);
-        free(funName);
     }
 }
 
@@ -177,7 +168,6 @@ void printPopParams(const ast_t* params) {
 
     for (long long int i = count-1; i >= 0; i++) {
         printf("POPS %s\n", paramsName[i]);
-        free(paramsName[i]);
     }
 }
 
@@ -191,7 +181,6 @@ void printPushParams(const ast_t* params) {
         codegen_getName(NAME_VAR, currentPar->token->data.str_value, &varName);
         printf("PUSHS %s\n", varName);
         currentPar = currentPar->right;
-        free(varName);
     }
 }
 
@@ -206,25 +195,20 @@ void codegen_getName(const nameType name_type, char* currentName, char** resultN
 
     switch (name_type) {
         case NAME_IF:
-            *resultName = malloc(5+if_counter/10);
             snprintf(*resultName, 5+if_counter/10, "IF$%i", if_counter);
             if_counter++;
             break;
         case NAME_WHILE:
-            *resultName = malloc(5+while_counter/10);
             snprintf(*resultName, 5+while_counter/10, "IF$%i", while_counter);
             while_counter++;
             break;
         case NAME_VAR:
-            *resultName = malloc(strlen(currentName)+2);
             snprintf(*resultName, strlen(currentName)+2, "%s$var", currentName);
             break;
         case NAME_FUN:
-            *resultName = malloc(strlen(currentName)+2);
             snprintf(*resultName, strlen(currentName)+2, "%s$fun", currentName);
             break;
         case NAME_TEMP:
-            *resultName = malloc(5+tempVar_counter/10);
             snprintf(*resultName, 5+tempVar_counter/10, "T$%i", tempVar_counter);
             break;
         default:
