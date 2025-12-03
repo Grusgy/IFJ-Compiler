@@ -1,5 +1,9 @@
-#include <stdlib.h>
-#include <string.h>
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek:   xdrabem00
+*/
+
 #include "parser.h"
 
 // =================== Globální stav ===================
