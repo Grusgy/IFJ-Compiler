@@ -53,16 +53,16 @@ struct Stmt {
         struct {
             char* fun_name;
             Stmt* fun_block;
-            //parametry
+            ast_t* parameters;
         } fun_dec;
 
         struct {
             char* fun_name;
-            //parametry
+            ast_t* parameters;
         } fun_call;
 
         struct {
-            char* var_return;   //Může být null v případě že funkce je void
+            char* var_name;   //Může být null v případě že funkce je void
         } return_;
     } as;
 };
