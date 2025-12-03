@@ -10,8 +10,16 @@ Implementace překladače imperativního jazyka IFJ25
 #include <stdlib.h>
 #include <string.h>
 
+bool firstRun = true;
+
 //Hlavní funkce pro generaci kódu
 void codeGenerator(Stmt* stmt) {
+    if(firstRun){
+        printf(".IFJcode25\n");
+        printf("JUMP main$fun\n\n");
+        firstRun = false;
+    }
+
     Stmt* currentStmt = stmt;
 
     //Prochází linked list stromů z instrukcemi (každý strom = jedna instrukce)
