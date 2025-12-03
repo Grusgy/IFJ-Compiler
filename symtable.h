@@ -65,30 +65,44 @@ typedef struct {
     } data;
 } SymbolData;
 
+// Fwd deklarace uzlu stromu, aby ji mohl SymTable používat
+struct SymNode;
+
 // ===========================================================
-// Struktura celé tabulky symbolů (AVL strom)
+// Struktura celé tabulky symbolů (AVL strom + parent scope)
 // ===========================================================
 typedef struct symTable_t {
-    struct SymNode *root;    // kořen AVL stromu
+    struct SymNode *root;        // kořen AVL stromu
+    struct symTable_t *parent;   // rodičovský scope (NULL pro globální)
 } SymTable;
 
 // ===========================================================
 // Veřejné API tabulky symbolů
 // ===========================================================
 
-// Inicializace tabulky
+// Inicializace globální tabulky (root=NULL, parent=NULL)
 void symtable_init(SymTable *table);
 
-// Uvolnění tabulky a všech uzlů
+// Inicializace lokální tabulky s daným rodičem (nový scope)
+void symtable_init_child(SymTable *child, SymTable *parent);
+
+// Uvolnění tabulky a všech uzlů (jen této tabulky, ne rodičů)
 void symtable_free(SymTable *table);
 
-// Vložení nového symbolu (návrat false = chyba alokace)
+// Vložení nového symbolu do *aktuálního* scope (AVL v této tabulce).
+// Návrat false = chyba alokace.
+bool symtable_insert_here(SymTable *table, const char *key, SymbolData data);
+
+// Zpětně kompatibilní alias na insert_here
 bool symtable_insert(SymTable *table, const char *key, SymbolData data);
 
-// Najde symbol podle jména, NULL pokud neexistuje
+// Najde symbol podle jména pouze v AKTUÁLNÍ tabulce (ne v rodičích)
+SymbolData *symtable_find_here(SymTable *table, const char *key);
+
+// Najde symbol podle jména v AKTUÁLNÍM i VŠECH rodičích (scope chain)
 SymbolData *symtable_find(SymTable *table, const char *key);
 
-// Smazání konkrétního symbolu (volitelné)
+// Smazání konkrétního symbolu (volitelné, jen z aktuální tabulky)
 bool symtable_delete(SymTable *table, const char *key);
 
 // Pomocné funkce pro tvorbu symbolů

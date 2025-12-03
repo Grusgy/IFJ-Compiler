@@ -108,7 +108,7 @@ void evaluate(const ast_t* ast) {
                 free(varName);
             }
             else {
-                printf("PUSHS %lld\n", ast->token->data.num_int_value);
+                printf("PUSHS %lld\n", ast->token.data.num_int_value);
             }
         }
         else {

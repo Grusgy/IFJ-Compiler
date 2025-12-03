@@ -4,14 +4,14 @@
 
 // =================== Globální stav ===================
 
-// Globální aktuální token
+// Globální aktuální token – scanner ho naplňuje přes get_next_token
 static Token cur_tok;
 
 static int next_token(void) {
-    return get_next_token(&cur_tok);   // scanner plní přímo cur_tok
+    return get_next_token(&cur_tok);
 }
 
-// jednoduchý helper na očekávání typu
+// jednoduchý helper na očekávání typu (zatím ho skoro nepoužíváme)
 static int expect(TokenType t) {
     if (cur_tok.type != t) return 2;   // syntaktická chyba
     return 0;
@@ -21,7 +21,7 @@ static int expect(TokenType t) {
 
 static int parse_statement(Stmt **out_stmt, SymTable *symtable);
 static int parse_expression(ast_t **out_expr);
-static int parse_block(Stmt **out_block_stmt, SymTable *symtable);
+static int parse_block(Stmt **out_block_stmt, SymTable *parent_symtable);
 static int parse_while(Stmt **out_stmt, SymTable *symtable);
 static int parse_return_stmt(Stmt **out_stmt, SymTable *symtable);
 static int parse_id_statement(Stmt **out_stmt, SymTable *symtable);
@@ -120,9 +120,10 @@ static int parse_expression(ast_t **out_expr) {
 }
 
 // ================== POMOCNÉ: ID → ASSIGN / FUN_CALL ======================
-
+//
 // id = expr       → STMT_ASSIGN
 // id(expr, ...)  → STMT_FUN_CALL
+//
 static int parse_id_statement(Stmt **out_stmt, SymTable *symtable) {
     if (cur_tok.type != TOK_ID) return 2;
 
@@ -134,7 +135,7 @@ static int parse_id_statement(Stmt **out_stmt, SymTable *symtable) {
 
     // varianta 1: přiřazení
     if (cur_tok.type == TOK_ASSIGN) {
-        // sémantika: proměnná musí existovat
+        // sémantika: proměnná musí existovat (včetně rodičovských scope)
         SymbolData *found = symtable_find(symtable, id_name);
         if (!found || found->kind != SYM_VAR) {
             return 3; // použití nedefinované proměnné
@@ -221,9 +222,9 @@ static int parse_var_decl(Stmt **out_stmt, SymTable *symtable) {
     if (cur_tok.type != TOK_ID) return 2;
     char *id_name = cur_tok.data.str_value;  // ukazatel z tokenu – předáme ho dál
 
-    // sémantika: nesmí být redefinice
-    if (symtable_find(symtable, id_name) != NULL) {
-        return 3; // sémantická chyba – redeklarace
+    // sémantika: nesmí být redefinice ve STEJNÉM scope
+    if (symtable_find_here(symtable, id_name) != NULL) {
+        return 3; // sémantická chyba – redeklarace ve stejném scope
     }
 
     // vytvoříme Stmt pro deklaraci
@@ -236,7 +237,7 @@ static int parse_var_decl(Stmt **out_stmt, SymTable *symtable) {
 
     // vytvoříme symbol – typ zatím TYPE_UNDEF, není inicializovaná
     SymbolData sym = symbol_make_var(TYPE_UNDEF, false);
-    if (!symtable_insert(symtable, id_name, sym)) return 99;
+    if (!symtable_insert_here(symtable, id_name, sym)) return 99;
 
     rc = next_token();  // jdeme za ID
     if (rc) return rc;
@@ -330,11 +331,15 @@ static int parse_return_stmt(Stmt **out_stmt, SymTable *symtable) {
 }
 
 // { stmt* }
-static int parse_block(Stmt **out_block_stmt, SymTable *symtable) {
+static int parse_block(Stmt **out_block_stmt, SymTable *parent_symtable) {
     if (cur_tok.type != TOK_LBRACE) return 2;
 
     int rc = next_token();   // za '{'
     if (rc) return rc;
+
+    // nový lokální scope pro tento blok
+    SymTable local;
+    symtable_init_child(&local, parent_symtable);
 
     Stmt *first = NULL;
     Stmt *last = NULL;
@@ -344,13 +349,19 @@ static int parse_block(Stmt **out_block_stmt, SymTable *symtable) {
         // přeskočíme případné EOL
         while (cur_tok.type == TOK_EOL) {
             rc = next_token();
-            if (rc) return rc;
+            if (rc) {
+                symtable_free(&local);
+                return rc;
+            }
         }
         if (cur_tok.type == TOK_RBRACE || cur_tok.type == TOK_EOF) break;
 
         Stmt *stmt = NULL;
-        rc = parse_statement(&stmt, symtable);
-        if (rc) return rc;
+        rc = parse_statement(&stmt, &local);  // používáme lokální tabulku
+        if (rc) {
+            symtable_free(&local);
+            return rc;
+        }
         if (!stmt) break; // nic se nenaparsovalo
 
         if (!first) first = stmt;
@@ -361,16 +372,29 @@ static int parse_block(Stmt **out_block_stmt, SymTable *symtable) {
         last = stmt;
     }
 
-    if (cur_tok.type != TOK_RBRACE) return 2;
+    if (cur_tok.type != TOK_RBRACE) {
+        symtable_free(&local);
+        return 2;
+    }
 
     rc = next_token(); // za '}'
-    if (rc) return rc;
+    if (rc) {
+        symtable_free(&local);
+        return rc;
+    }
 
     Stmt *block_stmt = stmt_create(STMT_BLOCK);
-    if (!block_stmt) return 99;
+    if (!block_stmt) {
+        symtable_free(&local);
+        return 99;
+    }
     block_stmt->as.block.first = first;
 
     *out_block_stmt = block_stmt;
+
+    // lokální symboly už nepotřebujeme – scope končí
+    symtable_free(&local);
+
     return 0;
 }
 
@@ -448,7 +472,7 @@ static int parse_statement(Stmt **out_stmt, SymTable *symtable) {
 
 int parse_program(Stmt **stmts_out, SymTable *symtable) {
     *stmts_out = NULL;
-    symtable_init(symtable);
+    symtable_init(symtable);   // globální scope
 
     int rc = next_token();
     if (rc) return rc;
