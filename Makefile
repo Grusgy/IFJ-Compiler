@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11
 
-SRC = ast.c generator.c parser.c scanner.c stack.c stmt.c symtable.c
+SRC = main.c ast.c generator.c parser.c scanner.c stmt.c symtable.c
 OBJ = $(SRC:.c=.o)
 TARGET = ifjc
 

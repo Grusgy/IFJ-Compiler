@@ -1,69 +1,60 @@
+/*
+    Implementace překladače imperativního jazyka IFJ25
+
+    Marek Drábek (xdrabem00)
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "parser.h"
 #include "generator.h"
-#include "stmt.h"
 #include "symtable.h"
 
-int main(int argc, char **argv) {
-    // Pokud je zadán argument, přesměrujeme stdin z daného souboru
-    if (argc == 2) {
-        FILE *f = fopen(argv[1], "r");
-        if (!f) {
-            perror("Nemohu otevrit vstupni soubor");
-            return 99; // interní chyba
-        }
-        // přesměrujeme stdin na tento soubor, protože scanner používá getchar()
-        if (!freopen(argv[1], "r", stdin)) {
-            perror("Nemohu presmerovat stdin");
-            fclose(f);
-            return 99;
-        }
-        // fclose(f);  // není nutné, stream je teď stdin
-    } else if (argc > 2) {
-        fprintf(stderr, "Pouziti: %s [soubor.ifj]\n", argv[0]);
-        return 99;
-    }
+// funkce ze scanneru pro nastavení vstupního proudu
+extern void set_input_file(FILE *f);
 
-    Stmt *root = NULL;   // první příkaz programu (spojový seznam)
-    SymTable symtable;   // globální tabulka symbolů
+int main(void) {
+    // Nastavení vstupu podle zadání (standardní vstup)
+    set_input_file(stdin);
 
-    // 1) Překlad vstupu: scanner + parser + sémantika
-    int rc = parse_program(&root, &symtable);
+    // Inicializace tabulky symbolů a ukazatele na hlavní AST
+    SymTable global_symtable;
+    symtable_init(&global_symtable);
 
-    if (rc != 0) {
-        // chyba – podle zadání IFJ se vrací přímo kód chyby
-        switch (rc) {
+    Stmt *program = NULL;
+
+    // Spuštění parseru
+    int parse_result = parse_program(&program, &global_symtable);
+
+    // Zpracování návratového kódu (dle specifikace IFJ25)
+    if (parse_result != 0) {
+        switch (parse_result) {
             case 1:
-                fprintf(stderr, "Lexikalni chyba (kod 1)\n");
+                fprintf(stderr, "Lexikální chyba (kód 1)\n");
                 break;
             case 2:
-                fprintf(stderr, "Syntakticka chyba (kod 2)\n");
+                fprintf(stderr, "Syntaktická chyba (kód 2)\n");
                 break;
             case 3:
-                fprintf(stderr, "Semanticka chyba (kod 3)\n");
+                fprintf(stderr, "Sémantická chyba (kód 3)\n");
+                break;
+            case 99:
+                fprintf(stderr, "Interní chyba překladače (kód 99)\n");
                 break;
             default:
-                fprintf(stderr, "Interni chyba (kod %d)\n", rc);
-                rc = 99;   // jistota, že je to „interní chyba“
-                break;
+                fprintf(stderr, "Neznámý kód chyby: %d\n", parse_result);
         }
 
-        if (root) {
-            stmt_free(root);
-        }
-        symtable_free(&symtable);
-
-        return rc;
+        symtable_free(&global_symtable);
+        return parse_result;
     }
 
-    // 2) Pokud parse_program proběhl OK, vygenerujeme IFJcode25
-    codeGenerator(root);
+    // Pokud vše proběhlo bez chyby → generujeme IFJcode25 na stdout
+    codeGenerator(program);
 
-    // 3) Úklid paměti
-    stmt_free(root);
-    // symtable_free(&symtable);  // pokud časem uděláte
+    // Úklid (uvolnění symbolů)
+    symtable_free(&global_symtable);
 
+    // Návratová hodnota 0 = překlad proběhl úspěšně
     return 0;
 }
