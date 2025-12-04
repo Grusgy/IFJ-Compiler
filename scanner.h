@@ -60,6 +60,7 @@ typedef enum token_type {
     TOK_GT,
     TOK_LTE,
     TOK_GTE,
+    TOK_ASSIGN,
     TOK_EQ,
     TOK_NEQ,
 
@@ -69,7 +70,6 @@ typedef enum token_type {
     TOK_RBRACE,
     TOK_LPAR,
     TOK_RPAR,
-    TOK_ASSIGN,
     TOK_COMMA,
     TOK_EOF
 } TokenType;

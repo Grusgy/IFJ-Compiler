@@ -238,7 +238,7 @@ void evaluate(const ast_t* ast) {
         printf("DEFVAR %s\n", tempVal);
         printf("DEFVAR %s\n", tempVal2);
         if (ast->right->right->token.type == TOK_CONST_INT)
-            printf("MOVE %s %s\n", tempVal, ast->right->right->token.data.num_int_value);
+            printf("MOVE %s %lli\n", tempVal, ast->right->right->token.data.num_int_value);
         else
             printf("MOVE %s %s\n", tempVal, ast->right->right->token.data.str_value);
         printf("INT2STRING %s %s\n", tempVal2, tempVal);
@@ -251,7 +251,7 @@ void evaluate(const ast_t* ast) {
         codegen_getName(NAME_TEMP, "", &tempVal);
         printf("DEFVAR %s\n", tempVal);
         if (ast->right->right->token.type == TOK_CONST_FLOAT)
-            printf("FLOAT2INT %s %s\n",tempVal, ast->right->right->token.data.num_float_value);
+            printf("FLOAT2INT %s %f\n",tempVal, ast->right->right->token.data.num_float_value);
         else {
             char* tokenName;
             codegen_getName(NAME_VAR, ast->right->right->token.data.str_value, &tokenName);
@@ -269,7 +269,7 @@ void evaluate(const ast_t* ast) {
         codegen_getName(NAME_TEMP, "", &tempVal);
         printf("DEFVAR %s\n", tempVal);
         if (ast->right->right->right->token.type == TOK_CONST_INT)
-            printf("STRI2INT %s %s %s\n", tempVal, ast->right->right->token.data.str_value, ast->right->right->right->token.data.num_int_value);
+            printf("STRI2INT %s %s %lli\n", tempVal, ast->right->right->token.data.str_value, ast->right->right->right->token.data.num_int_value);
         else
             printf("STRI2INT %s %s %s\n", tempVal, ast->right->right->token.data.str_value, ast->right->right->right->token.data.str_value);
         printf("PUSHS %s\n", tempVal);
@@ -288,7 +288,7 @@ void evaluate(const ast_t* ast) {
         codegen_getName(NAME_TEMP, "", &tempVal);
         printf("DEFVAR %s\n", tempVal);
         if (ast->right->right->token.type == TOK_CONST_FLOAT)
-            printf("FLOAT2STR %s %s\n", tempVal, ast->right->right->token.data.num_float_value);
+            printf("FLOAT2STR %s %f\n", tempVal, ast->right->right->token.data.num_float_value);
         else {
             char* tokenName;
             codegen_getName(NAME_VAR, ast->right->right->token.data.str_value, &tokenName);
