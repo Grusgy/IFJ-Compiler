@@ -50,6 +50,17 @@ static int get_balance(SymNode *n) {
     return n ? height(n->left) - height(n->right) : 0;
 }
 
+static char *my_strdup(const char *s) {
+    size_t len = strlen(s) + 1;
+    char *p = malloc(len);
+    if (!p) {
+        return NULL;
+    }
+    memcpy(p, s, len);   // zkopíruje i '\0'
+    return p;
+}
+
+
 // ===========================================================
 // Vytvoření nového uzlu
 // ===========================================================
@@ -57,7 +68,7 @@ static SymNode *new_node(const char *key, SymbolData data) {
     SymNode *n = malloc(sizeof(SymNode));
     if (!n) return NULL;
 
-    n->key = strdup(key);
+    n->key = my_strdup(key);
     if (!n->key) {
         free(n);
         return NULL;
@@ -144,10 +155,6 @@ static void free_node(SymNode *node) {
     free(node);
 }
 
-// ===========================================================
-// Veřejné API implementace
-// ===========================================================
-
 void symtable_init(SymTable *table) {
     table->root = NULL;
     table->parent = NULL;
@@ -197,7 +204,6 @@ SymbolData *symtable_find(SymTable *table, const char *key) {
 bool symtable_delete(SymTable *table, const char *key) {
     (void)table;
     (void)key;
-    // mazání není potřeba pro IFJ25, implementace volitelná
     return false;
 }
 
@@ -217,7 +223,7 @@ SymbolData symbol_make_var(DataType type, bool initialized) {
 SymbolData symbol_make_func(const char *name, DataType return_type, size_t param_count) {
     SymbolData s;
     s.kind = SYM_FUNC;
-    s.data.func.name = strdup(name);
+    s.data.func.name = my_strdup(name);
     s.data.func.return_type = return_type;
     s.data.func.param_count = param_count;
     s.data.func.params = NULL;
